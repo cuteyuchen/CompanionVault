@@ -19,7 +19,7 @@ jobs:
             if git rev-parse "$tag" >/dev/null 2>&1; then continue; fi
             sha=$(git log --format='%H %s' --all | awk -v msg="feat: release v${version}" '$0 ~ msg {print $1; exit}')
             if [ -n "$sha" ]; then
-              git tag -a "$tag" "$sha" -m "CompanionVault $tag"
+              git tag "$tag" "$sha"
               git push origin "$tag"
             fi
           done
