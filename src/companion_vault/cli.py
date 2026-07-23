@@ -1,18 +1,43 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .compiler import build_all
 from .core import dump_yaml, load_yaml, persona_dirs, repo_root, validate_persona
 from .installer import install_from_dist
+from .release import package_personas
+from .site import build_site
 
 
-def command_list(root: Path) -> int:
-    for directory in persona_dirs(root):
-        p = load_yaml(directory / "persona.yaml")
+def all_personas(root: Path):
+    return [(d, load_yaml(d / "persona.yaml")) for d in persona_dirs(root)]
+
+
+def command_list(root: Path, query: str | None = None) -> int:
+    query_norm = (query or "").casefold()
+    for directory, p in all_personas(root):
+        haystack = " ".join([p["id"], p["name"], p["summary"], *p.get("tags", [])]).casefold()
+        if query_norm and query_norm not in haystack:
+            continue
         print(f"{p['id']:<22} {p['name']:<12} {p['summary']}")
+    return 0
+
+
+def command_show(root: Path, persona_id: str, raw: bool) -> int:
+    matches = [(d, p) for d, p in all_personas(root) if p["id"] == persona_id]
+    if not matches:
+        raise KeyError(persona_id)
+    d, p = matches[0]
+    if raw:
+        print((d / "persona.yaml").read_text(encoding="utf-8"))
+    else:
+        print(f"{p['name']} ({p['id']}@{p['version']})")
+        print(p["summary"])
+        print("标签：" + "、".join(p.get("tags", [])))
+        print("核心性格：" + "、".join(t["name"] for t in p["personality"]["core_traits"]))
     return 0
 
 
@@ -24,17 +49,14 @@ def command_validate(root: Path, path: str | None) -> int:
         if errors:
             failed = True
             print(f"FAIL {directory}")
-            for error in errors:
-                print(f"  - {error}")
-        else:
-            print(f"OK   {directory}")
+            for error in errors: print(f"  - {error}")
+        else: print(f"OK   {directory}")
     return 1 if failed else 0
 
 
 def command_new(root: Path, persona_id: str, name: str, locale: str) -> int:
     directory = root / "personas" / locale / persona_id
-    if directory.exists():
-        raise FileExistsError(directory)
+    if directory.exists(): raise FileExistsError(directory)
     directory.mkdir(parents=True)
     persona = {
         "schema_version": 1, "id": persona_id, "version": "0.1.0", "locale": locale,
@@ -54,29 +76,32 @@ def command_new(root: Path, persona_id: str, name: str, locale: str) -> int:
     (directory / "examples.yaml").write_text("schema_version: 1\nexamples: []\n", encoding="utf-8")
     (directory / "tests.yaml").write_text("schema_version: 1\ntests: []\n", encoding="utf-8")
     (directory / "README.md").write_text(f"# {name}\n\n请补充人格介绍。\n", encoding="utf-8")
-    print(directory)
-    return 0
+    print(directory); return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="companion-vault")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("list")
+    p_list = sub.add_parser("list"); p_list.add_argument("--search")
+    p_show = sub.add_parser("show"); p_show.add_argument("persona"); p_show.add_argument("--raw", action="store_true")
     p_validate = sub.add_parser("validate"); p_validate.add_argument("path", nargs="?")
-    p_build = sub.add_parser("build"); p_build.add_argument("--output", default="dist")
+    p_build = sub.add_parser("build"); p_build.add_argument("--output", default="dist"); p_build.add_argument("--packages", action="store_true")
+    p_site = sub.add_parser("site-build"); p_site.add_argument("--output", default="_site")
     p_install = sub.add_parser("install"); p_install.add_argument("persona"); p_install.add_argument("--target", choices=["hermes", "generic", "sillytavern"], default="hermes"); p_install.add_argument("--path")
     p_new = sub.add_parser("new-persona"); p_new.add_argument("id"); p_new.add_argument("--name", required=True); p_new.add_argument("--locale", default="zh-CN")
-    args = parser.parse_args(argv)
-    root = repo_root()
-    if args.command == "list": return command_list(root)
+    args = parser.parse_args(argv); root = repo_root()
+    if args.command == "list": return command_list(root, args.search)
+    if args.command == "show": return command_show(root, args.persona, args.raw)
     if args.command == "validate": return command_validate(root, args.path)
-    if args.command == "build": build_all(root, root / args.output); print(root / args.output); return 0
+    if args.command == "build":
+        build_all(root, root / args.output)
+        if args.packages: package_personas(root)
+        print(root / args.output); return 0
+    if args.command == "site-build": print(build_site(root, root / args.output)); return 0
     if args.command == "install":
         build_all(root, root / "dist")
-        path = install_from_dist(root, args.persona, args.target, Path(args.path).expanduser() if args.path else None)
-        print(path); return 0
+        print(install_from_dist(root, args.persona, args.target, Path(args.path).expanduser() if args.path else None)); return 0
     if args.command == "new-persona": return command_new(root, args.id, args.name, args.locale)
     return 2
 
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__": sys.exit(main())

@@ -31,3 +31,12 @@ companion-vault validate personas/zh-CN/my-companion
 - `dist/`：自动生成，禁止手工修改
 
 代码使用 MIT License；人格文本默认使用 CC BY 4.0。
+
+## 人格目录页面
+
+```bash
+companion-vault site-build
+python -m http.server -d _site 8000
+```
+
+页面会从生成的 `registry.json` 读取人格，支持标签筛选、全文搜索和直接下载。

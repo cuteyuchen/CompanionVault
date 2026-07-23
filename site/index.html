@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CompanionVault · 开源陪伴人格库</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><div class="brand">CompanionVault</div><a href="https://github.com/cuteyuchen/CompanionVault">GitHub</a></header>
+  <main>
+    <section class="hero"><p class="eyebrow">OPEN COMPANION PERSONAS</p><h1>让陪伴人格可以被安装、验证与共同维护。</h1><p>面向 Hermes、通用 LLM 和 SillyTavern 的长期情感陪伴人格库。</p></section>
+    <section class="toolbar"><input id="search" placeholder="搜索人格、标签或性格…"><div id="tags"></div></section>
+    <section id="grid" class="grid"></section>
+  </main>
+  <template id="card"><article><div class="meta"><span class="locale"></span><span class="version"></span></div><h2></h2><p class="summary"></p><div class="card-tags"></div><div class="actions"><a class="primary hermes">Hermes</a><a class="generic">System Prompt</a><a class="cardjson">角色卡</a></div></article></template>
+  <script src="app.js"></script>
+</body>
+</html>
