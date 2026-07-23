@@ -6,3 +6,4 @@ build/
 *.egg-info/
 .private/
 .local-personas/
+candidates/*/.private/

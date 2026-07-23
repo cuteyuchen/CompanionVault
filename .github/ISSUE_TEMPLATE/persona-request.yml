@@ -1,0 +1,16 @@
+name: 人格请求
+description: 建议一种新的陪伴人格类型
+title: "[Persona Request] "
+labels: ["persona-request"]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 这个人格主要陪伴用户处理哪些日常场景？
+    validations: { required: true }
+  - type: textarea
+    id: difference
+    attributes:
+      label: 与现有人格的差异
+    validations: { required: true }

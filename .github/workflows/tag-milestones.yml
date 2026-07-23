@@ -1,0 +1,25 @@
+name: Tag milestones
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  tag:
+    if: github.repository == 'cuteyuchen/CompanionVault'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Create missing milestone tags
+        run: |
+          set -e
+          for version in 0.1.0 0.2.0 1.0.0; do
+            tag="v${version}"
+            if git rev-parse "$tag" >/dev/null 2>&1; then continue; fi
+            sha=$(git log --format='%H %s' --all | awk -v msg="feat: release v${version}" '$0 ~ msg {print $1; exit}')
+            if [ -n "$sha" ]; then
+              git tag -a "$tag" "$sha" -m "CompanionVault $tag"
+              git push origin "$tag"
+            fi
+          done

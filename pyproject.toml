@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "companion-vault"
-version = "0.2.0"
+version = "1.0.0"
 description = "An open, installable registry of emotional companion personas for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+companion_vault = ["data/persona-distiller/**/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

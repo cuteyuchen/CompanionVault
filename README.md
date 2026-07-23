@@ -40,3 +40,38 @@ python -m http.server -d _site 8000
 ```
 
 页面会从生成的 `registry.json` 读取人格，支持标签筛选、全文搜索和直接下载。
+
+## 从聊天记录蒸馏人格
+
+安装跨 Agent 标准 Skill：
+
+```bash
+companion-vault skill-install --target claude --scope global
+companion-vault skill-install --target codex --scope global
+companion-vault skill-install --target agents --scope global
+```
+
+`persona-distiller` 已打包进 Python wheel，因此从源码安装或从发行包安装后都能部署 Skill。
+
+准备候选人格：
+
+```bash
+companion-vault distill chat.txt \
+  --speaker "目标说话人" \
+  --id my-companion \
+  --name "我的伙伴" \
+  --mode public \
+  --consent authorized
+```
+
+原始和归一化聊天数据只保存在被 Git 忽略的 `.private/` 中。公共 PR 只能包含脱敏、经人工审核的行为规则和示例。详见 `docs/privacy-and-consent.md`。
+
+## 生命周期
+
+```bash
+companion-vault install xiaoyou --target hermes
+companion-vault update --target hermes
+companion-vault rollback --target hermes
+companion-vault uninstall --target hermes
+companion-vault pin xiaoyou 1.0.0
+```
