@@ -1,0 +1,60 @@
+name: Build PersonaDock bundle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personadock-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .[dev]
+
+      - name: Run tests
+        run: pytest
+
+      - name: Build wheel
+        run: |
+          mkdir -p dist/python
+          python -m pip wheel . --no-deps --wheel-dir dist/python
+
+      - name: Build example PersonaPack
+        run: |
+          personadock init /tmp/persona-demo --id persona-demo --name "Persona Demo"
+          personadock pack /tmp/persona-demo --output "$GITHUB_WORKSPACE/dist/persona-demo-0.1.0.personapack"
+          personadock inspect "$GITHUB_WORKSPACE/dist/persona-demo-0.1.0.personapack"
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum python/*.whl *.personapack > SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: persona-dock-0.2.0
+          path: |
+            dist/python/*.whl
+            dist/*.personapack
+            dist/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 90
