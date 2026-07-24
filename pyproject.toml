@@ -32,7 +32,8 @@ include = ["persona_dock*"]
 [tool.setuptools.package-data]
 persona_dock = [
   "data/*.json",
-  "data/persona-distiller/**/*",
+  "data/persona-distiller/SKILL.md",
+  "data/persona-distiller/references/*.md",
 ]
 
 [tool.pytest.ini_options]
