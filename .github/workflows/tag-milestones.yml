@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Create tags and publish all milestone assets
+      - name: Build and publish all milestone assets
         env:
           GH_TOKEN: ${{ github.token }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -59,7 +59,7 @@ jobs:
               echo "- Command: \`${failed_command}\`"
               echo
               echo '```text'
-              tail -n 160 "$log_file" || true
+              tail -n 180 "$log_file" || true
               echo '```'
             } > "${RUNNER_TEMP}/failure.md"
             gh issue create \
@@ -82,7 +82,11 @@ jobs:
             tag="v${version}"
             echo "::group::Building ${tag}"
 
-            if ! git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+            if git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+              sha="$(git rev-list -n 1 "$tag")"
+              source_ref="$tag"
+              tag_exists=true
+            else
               if [[ "$version" == "1.0.0" ]]; then
                 sha="$V1_TAG_TARGET"
               else
@@ -94,12 +98,12 @@ jobs:
                 exit 1
               fi
 
-              git tag "$tag" "$sha"
-              git push origin "refs/tags/${tag}"
+              source_ref="$sha"
+              tag_exists=false
             fi
 
             workdir="${temp_root}/${tag}"
-            git worktree add --detach "$workdir" "$tag"
+            git worktree add --detach "$workdir" "$source_ref"
 
             python_bin="${workdir}/.venv/bin/python"
             python -m venv "${workdir}/.venv"
@@ -158,8 +162,13 @@ jobs:
             )
 
             if ! gh release view "$tag" >/dev/null 2>&1; then
-              gh release create "$tag" --verify-tag --generate-notes --title "$tag"
+              if [[ "$tag_exists" == true ]]; then
+                gh release create "$tag" --verify-tag --generate-notes --title "$tag"
+              else
+                gh release create "$tag" --target "$sha" --generate-notes --title "$tag"
+              fi
             fi
+
             gh release upload "$tag" \
               "${workdir}"/dist/packages/*.zip \
               "${workdir}"/dist/python/*.whl \
