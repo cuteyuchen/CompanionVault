@@ -19,15 +19,17 @@
 </head>
 <body>
   <h1>PersonaDock</h1>
-  <p class="lead">安装一个统一的 persona-builder Skill，直接描述你想要的人格、选择聊天记录进行证据蒸馏，或将两者结合。Skill 会自动判断模式，生成短 SOUL、详细 Skill、已审核 Memory 和可移植 PersonaPack。</p>
-  <pre><code>pip install persona-dock
-personadock skill install --target codex --scope global
-# 在 Codex 中描述人格或选择聊天记录
-personadock install ./my-persona.personapack --target hermes</code></pre>
+  <p class="lead">无需安装 Python。通过系统安装脚本获取独立程序，再把统一的 persona-builder Skill 安装到 Codex、Claude 或 OpenCode。直接描述人格、选择聊天记录，或将两者结合，Skill 会自动判断创建、蒸馏、混合或优化模式。</p>
+  <h2>Linux / macOS</h2>
+  <pre><code>curl -fsSL https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.sh | sh
+personadock skill install --target codex --scope global</code></pre>
+  <h2>Windows PowerShell</h2>
+  <pre><code>irm https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.ps1 | iex
+personadock skill install --target codex --scope global</code></pre>
   <div class="grid">
+    <div class="card"><strong>No Python required</strong><br>Release 提供 Linux、Windows 与 macOS 独立程序。</div>
     <div class="card"><strong>One Skill</strong><br>自动选择创建、蒸馏、混合或优化流程。</div>
     <div class="card"><strong>Evidence-aware</strong><br>聊天蒸馏保留来源、置信度和审核过程。</div>
-    <div class="card"><strong>Layered</strong><br>SOUL、Skill、Memory 各司其职，避免上下文膨胀。</div>
     <div class="card"><strong>Portable</strong><br>使用可校验的 .personapack 跨智能体安装。</div>
   </div>
   <h2>私有、本地、可选择公开</h2>
