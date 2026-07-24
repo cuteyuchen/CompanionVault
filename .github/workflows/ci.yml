@@ -28,7 +28,14 @@ jobs:
       - name: Test
         run: pytest
 
-      - name: Exercise local workflow
+      - name: Exercise editor Skill installation
+        run: |
+          personadock skill install --target generic --scope project --path /tmp/editor-skills
+          test -f /tmp/editor-skills/persona-distiller/SKILL.md
+          test -f /tmp/editor-skills/persona-distiller/references/output-contract.md
+          grep -q "personadock pack" /tmp/editor-skills/persona-distiller/SKILL.md
+
+      - name: Exercise local PersonaPack workflow
         run: |
           personadock init /tmp/persona-demo --id persona-demo --name "Persona Demo"
           personadock validate /tmp/persona-demo
