@@ -10,6 +10,8 @@ from .distill import distill_chat
 from .installer import install_package, rollback, status, uninstall
 from .packaging import export_public, inspect_package, pack_project
 from .project import find_project, init_project, validate_project
+from .skill_install import TARGETS as SKILL_TARGETS
+from .skill_install import install_distiller_skill
 
 
 def _print_status() -> int:
@@ -39,13 +41,26 @@ def build_parser() -> argparse.ArgumentParser:
     command.add_argument("--locale", default="zh-CN")
     command.add_argument("--force", action="store_true")
 
-    command = sub.add_parser("distill", help="create a reviewable persona project from chat text")
+    command = sub.add_parser(
+        "distill",
+        help="lightweight fallback distillation for simple speaker-prefixed text",
+    )
     command.add_argument("input")
     command.add_argument("destination")
     command.add_argument("--id", required=True)
     command.add_argument("--name", required=True)
     command.add_argument("--speaker", required=True)
     command.add_argument("--locale", default="zh-CN")
+
+    skill = sub.add_parser("skill", help="manage PersonaDock AI editor Skills")
+    skill_sub = skill.add_subparsers(dest="skill_command", required=True)
+    command = skill_sub.add_parser(
+        "install",
+        help="install the persona-distiller Skill into Codex or another AI editor",
+    )
+    command.add_argument("--target", required=True, choices=sorted(SKILL_TARGETS))
+    command.add_argument("--scope", choices=["project", "global"], default="global")
+    command.add_argument("--path", help="custom parent directory for the installed Skill")
 
     command = sub.add_parser("validate", help="validate a local persona project")
     command.add_argument("project", nargs="?", default=".")
@@ -95,6 +110,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "distill":
         result = distill_chat(Path(args.input), Path(args.destination), args.id, args.name, args.speaker, args.locale)
+        print(result)
+        return 0
+    if args.command == "skill" and args.skill_command == "install":
+        result = install_distiller_skill(
+            args.target,
+            args.scope,
+            Path(args.path) if args.path else None,
+        )
         print(result)
         return 0
     if args.command == "validate":
