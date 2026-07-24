@@ -47,6 +47,12 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
       - name: Verify version
         id: version
         shell: bash
@@ -58,12 +64,6 @@ jobs:
             test "${RELEASE_TAG}" = "v${package_version}"
           fi
           echo "package_version=${package_version}" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
 
       - name: Install and test source
         run: |
