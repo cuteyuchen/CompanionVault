@@ -38,9 +38,21 @@ jobs:
           set -Eeuo pipefail
           : > legacy-audit.txt
 
-          path_matches="$(find . -path './.git' -prune -o \
+          legacy_roots="$(find . -path './.git' -prune -o -type d \
             \( -iname '*companion_vault*' -o -iname '*companion-vault*' -o -iname '*companionvault*' -o -iname '*cvault*' \) \
             -print)"
+          legacy_files="$(find . -path './.git' -prune -o -type f \
+            \( -iname '*companion_vault*' -o -iname '*companion-vault*' -o -iname '*companionvault*' -o -iname '*cvault*' \) \
+            -print)"
+
+          if [[ -n "$legacy_roots" ]]; then
+            while IFS= read -r root; do
+              [[ -n "$root" ]] && find "$root" -type f -print
+            done <<< "$legacy_roots" >> legacy-audit.txt
+          fi
+          if [[ -n "$legacy_files" ]]; then
+            printf '%s\n' "$legacy_files" >> legacy-audit.txt
+          fi
 
           text_matches="$(grep -RIlE \
             'CompanionVault|companion[_-]vault|companionvault|cvault' \
@@ -49,15 +61,12 @@ jobs:
             --exclude-dir=.git \
             . || true)"
 
-          if [[ -n "$path_matches" ]]; then
-            echo '[legacy paths]' >> legacy-audit.txt
-            printf '%s\n' "$path_matches" >> legacy-audit.txt
-          fi
           if [[ -n "$text_matches" ]]; then
             echo '[legacy text references]' >> legacy-audit.txt
             printf '%s\n' "$text_matches" >> legacy-audit.txt
           fi
 
+          sort -u -o legacy-audit.txt legacy-audit.txt
           if [[ -s legacy-audit.txt ]]; then
             cat legacy-audit.txt
             exit 1
