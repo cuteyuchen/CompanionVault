@@ -22,29 +22,87 @@ Skill 自动判断 Create / Distill / Hybrid / Refine 模式
 
 ## 安装 PersonaDock
 
+PersonaDock 以 GitHub Release 中的独立可执行文件发布，使用时不需要预先安装 Python。
+
+### Linux / macOS
+
 ```bash
-pip install persona-dock
+curl -fsSL https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.sh | sh
 ```
 
-开发安装：
+默认安装到：
 
-```bash
-git clone https://github.com/cuteyuchen/PersonaDock.git
-cd PersonaDock
-pip install -e .[dev]
+```text
+~/.local/bin/personadock
 ```
 
-查看命令：
+指定安装目录：
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.sh \
+  | sh -s -- --install-dir "$HOME/bin"
+```
+
+安装固定版本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.sh \
+  | sh -s -- --version v0.1.0
+```
+
+### Windows PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.ps1 | iex
+```
+
+默认安装到：
+
+```text
+%LOCALAPPDATA%\Programs\PersonaDock\personadock.exe
+```
+
+安装脚本会把目录加入当前用户的 `PATH`。安装后重新打开终端：
+
+```powershell
 personadock --help
-# 或
-pdock --help
+```
+
+安装固定版本：
+
+```powershell
+$env:PERSONADOCK_VERSION = "v0.1.0"
+irm https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.ps1 | iex
+```
+
+自定义安装目录：
+
+```powershell
+$env:PERSONADOCK_INSTALL_DIR = "$HOME\bin"
+irm https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.ps1 | iex
+```
+
+### 安装安全
+
+安装脚本会：
+
+1. 根据操作系统和 CPU 架构选择对应的 Release 资产。
+2. 同时下载 Release 中的 `SHA256SUMS`。
+3. 校验文件哈希。
+4. 解压并安装独立可执行文件。
+5. 运行 `personadock --help` 完成烟雾测试。
+
+也可以先下载并检查脚本，再手动运行：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/cuteyuchen/PersonaDock/main/install.sh
+less install.sh
+sh install.sh
 ```
 
 ## 安装统一人格 Skill
 
-PersonaDock wheel 内置一个统一的 `persona-builder` Skill。它同时负责自然语言创建、聊天蒸馏、混合生成和已有工程优化，用户不需要安装或选择多个 Skill。
+PersonaDock 内置一个统一的 `persona-builder` Skill。它同时负责自然语言创建、聊天蒸馏、混合生成和已有工程优化，用户不需要安装或选择多个 Skill。
 
 Codex 全局安装：
 
@@ -138,16 +196,6 @@ Skill 会把自然语言要求转换为可执行规则：
 触发条件 → 可观察行为 → 限制 → Skill reference → 场景测试
 ```
 
-例如：
-
-```text
-用户非常疲惫
-→ 缩短回复、停止轻度吐槽、先提供陪伴
-→ 不训话、不连续追问
-→ emotional-support.md
-→ tired-support 测试
-```
-
 完整设定不会被直接复制进 SOUL。
 
 ## 从聊天记录蒸馏人格
@@ -172,15 +220,12 @@ Skill 会自动进入 Distill 模式，并遵守：
 - 将归一化记录写入 `.private/normalized.jsonl`
 - 将行为证据、来源和置信度写入 `.private/evidence.jsonl`
 - 将未审核真实事实写入 `.private/memory-candidates.jsonl`
-- 将详细表达和场景行为写入人格 Skill references
 - 只把用户明确确认的事实写入 `memory/seed.jsonl`
 - 不声称生成的人格就是聊天中的现实人物
 
 单次现象、MBTI、星座、职业或推测不能直接成为稳定人格规则。
 
 ## 混合生成
-
-当用户同时提供设定和参考材料时，仍使用同一个 Skill：
 
 ```text
 请使用 persona-builder 创建 ./study-partner。
@@ -194,15 +239,6 @@ Hybrid 模式会区分：
 - 聊天记录中有证据支持的观察
 - 系统补充的非敏感默认项
 - 真实用户事实与共享事件
-
-冲突处理顺序默认是：
-
-```text
-用户最新明确要求
-→ 已审核的现有人格内容
-→ 有证据支持的来源观察
-→ 明确标记的默认设计
-```
 
 无法同时成立的冲突会保存在 `.private/design-notes.md` 中等待用户决定。
 
@@ -230,12 +266,6 @@ my-persona/
 │   └── persona/
 │       ├── SKILL.md
 │       └── references/
-│           ├── voice.md
-│           ├── daily-scenarios.md
-│           ├── emotional-support.md
-│           ├── conflict-repair.md
-│           ├── relationship-stages.md
-│           └── examples.md
 ├── memory/
 │   ├── profile.yaml
 │   ├── seed.jsonl
@@ -253,21 +283,6 @@ my-persona/
 - `memory/seed.jsonl` 只允许包含明确审核且带有 `reviewed: true` 的真实事实。
 - `.private/` 保存原始资料、证据、设计假设和未审核候选，永不打包。
 
-## 手工创建工程
-
-```bash
-personadock init ./my-companion \
-  --id my-companion \
-  --name "我的伙伴"
-```
-
-验证和构建：
-
-```bash
-personadock validate ./my-companion
-personadock build ./my-companion
-```
-
 ## 轻量备用蒸馏
 
 对于简单的“说话人：内容”文本，可以不依赖 AI 编辑器：
@@ -281,52 +296,25 @@ personadock distill ./chat.txt ./xiaoyou \
 
 该命令只生成待审核骨架、表达候选和记忆候选。复杂上下文、多文件分析和混合生成应使用统一 `persona-builder` Skill。
 
-## 打包 PersonaPack
+## 打包和安装 PersonaPack
 
 ```bash
+personadock validate ./my-companion
+personadock build ./my-companion
 personadock pack ./my-companion
-```
-
-输出：
-
-```text
-my-companion/dist/my-companion-0.1.0.personapack
-```
-
-`.personapack` 是可校验的 ZIP 格式，包含：
-
-- 目标平台的 SOUL
-- 人格 Skill 与 references
-- 经过明确审核的 Memory
-- 场景测试
-- Manifest 与每个文件的 SHA-256
-
-检查包：
-
-```bash
 personadock inspect ./my-companion/dist/my-companion-0.1.0.personapack
 ```
 
-## 安装到智能体
-
-Hermes：
+安装到 Hermes：
 
 ```bash
 personadock install ./persona.personapack --target hermes
 ```
 
-OpenClaw：
+安装到 OpenClaw：
 
 ```bash
 personadock install ./persona.personapack --target openclaw
-```
-
-指定安装目录：
-
-```bash
-personadock install ./persona.personapack \
-  --target hermes \
-  --path /custom/hermes/home
 ```
 
 管理安装：
@@ -336,15 +324,6 @@ personadock status
 personadock rollback --target hermes
 personadock uninstall --target openclaw
 ```
-
-## SOUL、Skill 与 Memory
-
-| 层 | 负责内容 | 加载方式 |
-|---|---|---|
-| SOUL | 身份、核心特征、边界、路由规则 | 始终加载，严格控制长度 |
-| Skill | 场景行为、表达细节、关系处理、缺点、示例 | 需要时按需加载 |
-| Memory | 真实偏好、事件与关系事实 | 检索后加载，不得虚构 |
-| Runtime | 当前会话和临时状态 | 由目标智能体管理 |
 
 ## 隐私模型
 
@@ -364,33 +343,38 @@ personadock uninstall --target openclaw
 personadock export-public ./my-companion
 ```
 
-## 发布 Python 包
+## 发布独立程序
 
-仓库使用 GitHub Actions 和 PyPI Trusted Publishing。推送与 `pyproject.toml` 版本一致的标签后，工作流会：
+推送与 `pyproject.toml` 版本一致的标签后，GitHub Actions 会：
 
 1. 运行测试。
-2. 构建 wheel 和 source distribution。
-3. 检查统一 Skill 是否进入 wheel。
-4. 构建示例 PersonaPack。
-5. 发布到 PyPI。
-6. 创建 GitHub Release。
-
-首次发布前需要配置：
-
-```text
-GitHub Environment: pypi
-PyPI Project: persona-dock
-Owner: cuteyuchen
-Repository: PersonaDock
-Workflow: release.yml
-Environment: pypi
-```
+2. 构建 Linux x64 与 ARM64 独立程序。
+3. 构建 macOS Intel 与 Apple Silicon 独立程序。
+4. 构建 Windows x64 独立程序。
+5. 在每个平台运行二进制并验证内置 Skill。
+6. 生成示例 PersonaPack 和 `SHA256SUMS`。
+7. 创建 GitHub Release 并上传安装脚本和全部资产。
 
 发布 `0.1.0`：
 
 ```bash
 git tag -a v0.1.0 -m "PersonaDock v0.1.0"
 git push origin v0.1.0
+```
+
+Release 资产包括：
+
+```text
+personadock-linux-x86_64.tar.gz
+personadock-linux-arm64.tar.gz
+personadock-macos-x86_64.tar.gz
+personadock-macos-arm64.tar.gz
+personadock-windows-x86_64.zip
+persona-demo-0.1.0.personapack
+install.sh
+install.ps1
+SHA256SUMS
+LICENSE
 ```
 
 ## 命令
