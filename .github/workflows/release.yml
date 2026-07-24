@@ -1,9 +1,23 @@
 name: Publish PersonaDock release
 
+run-name: >-
+  ${{ github.event_name == 'pull_request'
+      && format('Package dry run for PR #{0}', github.event.pull_request.number)
+      || format('Publish PersonaDock {0}', github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name) }}
+
 on:
   push:
     tags:
       - "v*"
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "src/**"
+      - "scripts/**"
+      - "tests_v2/**"
+      - "pyproject.toml"
+      - "install.sh"
+      - "install.ps1"
   workflow_dispatch:
     inputs:
       tag:
@@ -15,31 +29,23 @@ jobs:
   validate:
     name: Test and prepare release
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     permissions:
       contents: read
     outputs:
       package_version: ${{ steps.version.outputs.package_version }}
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      CHECKOUT_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name) }}
 
     steps:
-      - name: Checkout release tag
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ env.CHECKOUT_REF }}
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
-
-      - name: Verify tag and project version
-        id: version
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}"
-          package_version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
-          test "${RELEASE_TAG}" = "v${package_version}"
-          echo "package_version=${package_version}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,11 +53,30 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Verify version
+        id: version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package_version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}"
+            test "${RELEASE_TAG}" = "v${package_version}"
+          fi
+          echo "package_version=${package_version}" >> "$GITHUB_OUTPUT"
+
       - name: Install and test source
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .[dev]
           pytest
+
+      - name: Validate installer scripts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sh -n install.sh
+          pwsh -NoProfile -Command '[void][scriptblock]::Create((Get-Content install.ps1 -Raw))'
 
       - name: Build example PersonaPack
         run: |
@@ -71,6 +96,7 @@ jobs:
   build-binary:
     name: Build ${{ matrix.platform }} ${{ matrix.arch }}
     needs: validate
+    timeout-minutes: 35
     permissions:
       contents: read
     strategy:
@@ -105,15 +131,27 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      CHECKOUT_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name) }}
 
     steps:
-      - name: Checkout release tag
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ env.CHECKOUT_REF }}
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
+
+      - name: Show runner information
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python - <<'PY'
+          import platform
+          print("system:", platform.system())
+          print("machine:", platform.machine())
+          print("python:", platform.python_version())
+          PY
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -145,12 +183,89 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  github-release:
-    name: Publish GitHub Release
+      - name: Upload PyInstaller diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            build/personadock/warn-personadock.txt
+            build/personadock/xref-personadock.html
+            personadock.spec
+          if-no-files-found: ignore
+          retention-days: 7
+
+  assemble-dry-run:
+    name: Assemble release assets
+    if: github.event_name == 'pull_request'
     needs:
       - validate
       - build-binary
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Download platform executables
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: release
+          merge-multiple: true
+
+      - name: Download common release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-common
+          path: release
+
+      - name: Assemble and verify checksums
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cp install.sh install.ps1 LICENSE release/
+          chmod +x release/install.sh
+          cd release
+          expected=(
+            personadock-linux-x86_64.tar.gz
+            personadock-linux-arm64.tar.gz
+            personadock-macos-x86_64.tar.gz
+            personadock-macos-arm64.tar.gz
+            personadock-windows-x86_64.zip
+            "persona-demo-${{ needs.validate.outputs.package_version }}.personapack"
+            install.sh
+            install.ps1
+            LICENSE
+          )
+          for asset in "${expected[@]}"; do
+            test -s "$asset"
+          done
+          sha256sum "${expected[@]}" > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Upload assembled dry-run release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dry-run-${{ needs.validate.outputs.package_version }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  github-release:
+    name: Publish GitHub Release
+    if: github.event_name != 'pull_request'
+    needs:
+      - validate
+      - build-binary
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: write
     env:
@@ -183,17 +298,22 @@ jobs:
           cp install.sh install.ps1 LICENSE release/
           chmod +x release/install.sh
           cd release
-          sha256sum \
-            personadock-linux-x86_64.tar.gz \
-            personadock-linux-arm64.tar.gz \
-            personadock-macos-x86_64.tar.gz \
-            personadock-macos-arm64.tar.gz \
-            personadock-windows-x86_64.zip \
-            *.personapack \
-            install.sh \
-            install.ps1 \
-            LICENSE \
-            > SHA256SUMS
+          expected=(
+            personadock-linux-x86_64.tar.gz
+            personadock-linux-arm64.tar.gz
+            personadock-macos-x86_64.tar.gz
+            personadock-macos-arm64.tar.gz
+            personadock-windows-x86_64.zip
+            "persona-demo-${{ needs.validate.outputs.package_version }}.personapack"
+            install.sh
+            install.ps1
+            LICENSE
+          )
+          for asset in "${expected[@]}"; do
+            test -s "$asset"
+          done
+          sha256sum "${expected[@]}" > SHA256SUMS
+          sha256sum --check SHA256SUMS
 
       - name: Create or update GitHub Release
         env:
