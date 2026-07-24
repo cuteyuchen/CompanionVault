@@ -82,7 +82,7 @@ jobs:
             echo "::group::Building ${tag}"
 
             if ! git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
-              sha="$(git log --format='%H%x09%s' --all | awk -F '\t' -v msg="feat: release v${version}" '$2 == msg {print $1; exit}')"
+              sha="$(git log --all --format='%H' -n 1 --grep="^feat: release v${version}$")"
               if [[ -z "$sha" ]]; then
                 echo "Unable to find milestone commit for ${tag}" >&2
                 exit 1
