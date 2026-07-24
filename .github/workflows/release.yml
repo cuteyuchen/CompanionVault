@@ -11,12 +11,12 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-
 jobs:
-  release:
+  build:
+    name: Build release distributions
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
@@ -27,6 +27,7 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
 
       - name: Verify tag and package version
         shell: bash
@@ -37,28 +38,37 @@ jobs:
           test "${RELEASE_TAG}" = "v${package_version}"
           echo "PACKAGE_VERSION=${package_version}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install and test
+      - name: Install build and test tools
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
+          python -m pip install build twine
           python -m pip install -e .[dev]
-          pytest
 
-      - name: Build wheel
+      - name: Run tests
+        run: pytest
+
+      - name: Build wheel and source distribution
         run: |
-          mkdir -p dist/python
-          python -m pip wheel . --no-deps --wheel-dir dist/python
+          rm -rf dist
+          python -m build
 
-      - name: Verify wheel-bundled Skill
+      - name: Check Python distributions
+        run: python -m twine check dist/*.whl dist/*.tar.gz
+
+      - name: Verify wheel-bundled Skills
         shell: bash
         run: |
           set -Eeuo pipefail
-          wheel="$(find dist/python -type f -name '*.whl' -print -quit)"
+          wheel="$(find dist -type f -name '*.whl' -print -quit)"
           test -n "$wheel"
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/SKILL.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/prompt-contract.md'
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/SKILL.md'
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/references/output-contract.md'
 
@@ -69,9 +79,66 @@ jobs:
           personadock inspect "$GITHUB_WORKSPACE/dist/persona-demo-${PACKAGE_VERSION}.personapack"
 
       - name: Generate checksums
+        shell: bash
         run: |
+          set -Eeuo pipefail
           cd dist
-          sha256sum python/*.whl *.personapack > SHA256SUMS
+          sha256sum *.whl *.tar.gz *.personapack > SHA256SUMS
+
+      - name: Upload release distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/*.personapack
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-pypi:
+    name: Publish Python package to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/persona-dock
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+
+      - name: Keep only Python distributions
+        run: |
+          rm -f dist/*.personapack
+          rm -f dist/SHA256SUMS
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Publish GitHub Release
+    needs:
+      - build
+      - publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Download release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
 
       - name: Create or update GitHub Release
         env:
@@ -79,14 +146,17 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
               --verify-tag \
               --generate-notes \
               --title "PersonaDock ${RELEASE_TAG}"
           fi
           gh release upload "$RELEASE_TAG" \
-            dist/python/*.whl \
+            --repo "$GITHUB_REPOSITORY" \
+            dist/*.whl \
+            dist/*.tar.gz \
             dist/*.personapack \
             dist/SHA256SUMS \
             --clobber
