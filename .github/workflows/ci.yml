@@ -15,6 +15,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Audit retired standalone distiller Skill
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          : > retired-skill-files.txt
+          for path in skills/persona-distiller src/persona_dock/data/persona-distiller; do
+            if [[ -e "$path" ]]; then
+              find "$path" -type f -print >> retired-skill-files.txt
+            fi
+          done
+          sort -u -o retired-skill-files.txt retired-skill-files.txt
+          cat retired-skill-files.txt
+
+      - name: Upload retired Skill audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retired-skill-audit
+          path: retired-skill-files.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Reject retired standalone distiller Skill
+        shell: bash
+        run: test ! -s retired-skill-files.txt
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
