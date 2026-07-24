@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "companion-vault"
-version = "1.0.0"
-description = "An open, installable registry of emotional companion personas for AI agents."
+name = "persona-dock"
+version = "0.2.0"
+description = "Local-first toolkit for creating, packaging, and installing portable AI personas."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -15,19 +15,23 @@ dependencies = [
   "jsonschema>=4.20",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
 [project.scripts]
-companion-vault = "companion_vault.cli:main"
-cvault = "companion_vault.cli:main"
+personadock = "persona_dock.cli:main"
+pdock = "persona_dock.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["persona_dock*"]
 
 [tool.setuptools.package-data]
-companion_vault = ["data/persona-distiller/**/*"]
+persona_dock = ["data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-testpaths = ["tests"]
+testpaths = ["tests_v2"]
