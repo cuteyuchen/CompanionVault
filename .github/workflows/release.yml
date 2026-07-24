@@ -25,9 +25,10 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Verify tag
-        run: git rev-parse --verify "refs/tags/${RELEASE_TAG}"
+      - name: Verify remote tag
+        run: git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,7 +39,7 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -e .
+          python -m pip install .
 
       - name: Build persona outputs
         run: companion-vault build
@@ -72,6 +73,9 @@ jobs:
                       info.external_attr = 0o644 << 16
                       archive.writestr(info, path.read_bytes())
               print(destination)
+
+          if not list(output.glob("*.zip")):
+              raise SystemExit("no persona archives were generated")
           PY
 
       - name: Build CLI wheel
@@ -79,11 +83,19 @@ jobs:
           mkdir -p dist/python
           python -m pip wheel . --no-deps --wheel-dir dist/python
 
-      - name: Verify release assets
+      - name: Verify and checksum release assets
+        shell: bash
         run: |
-          find dist/packages -type f -name '*.zip' -print -quit | grep -q .
-          find dist/python -type f -name '*.whl' -print -quit | grep -q .
-          python -m zipfile -l "$(find dist/packages -type f -name '*.zip' | head -n 1)"
+          set -Eeuo pipefail
+          first_zip="$(find dist/packages -type f -name '*.zip' -print -quit)"
+          first_wheel="$(find dist/python -type f -name '*.whl' -print -quit)"
+          test -n "$first_zip"
+          test -n "$first_wheel"
+          python -m zipfile -l "$first_zip" >/dev/null
+          (
+            cd dist
+            sha256sum packages/*.zip python/*.whl > SHA256SUMS
+          )
 
       - name: Create or update GitHub Release
         env:
@@ -92,4 +104,8 @@ jobs:
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
           fi
-          gh release upload "$RELEASE_TAG" dist/packages/*.zip dist/python/*.whl --clobber
+          gh release upload "$RELEASE_TAG" \
+            dist/packages/*.zip \
+            dist/python/*.whl \
+            dist/SHA256SUMS \
+            --clobber
