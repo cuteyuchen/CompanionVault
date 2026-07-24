@@ -30,7 +30,10 @@ where = ["src"]
 include = ["persona_dock*"]
 
 [tool.setuptools.package-data]
-persona_dock = ["data/*.json"]
+persona_dock = [
+  "data/*.json",
+  "data/persona-distiller/**/*",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
