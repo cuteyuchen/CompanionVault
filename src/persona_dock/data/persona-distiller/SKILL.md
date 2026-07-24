@@ -2,7 +2,7 @@
 name: persona-distiller
 description: Create a private PersonaDock project from user-selected chat records. Generate a compact SOUL, detailed persona Skill, reviewed Memory, tests, and a portable PersonaPack. Works inside Codex and other AI editors; PersonaDock's built-in distill command is optional.
 argument-hint: [selected-chat-files] [output-project]
-version: 2.0.0
+version: 0.1.0
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
