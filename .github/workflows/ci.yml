@@ -15,6 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reject retired standalone distiller Skill
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          found=0
+          for path in skills/persona-distiller src/persona_dock/data/persona-distiller; do
+            if [[ -e "$path" ]]; then
+              echo "Retired Skill directory still exists: $path" >&2
+              find "$path" -type f -print | sort >&2
+              found=1
+            fi
+          done
+          test "$found" -eq 0
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
