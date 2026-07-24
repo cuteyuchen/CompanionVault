@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +22,19 @@ jobs:
 
       - name: Install
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
           python -m pip install -e .[dev]
+          python -m pip install pyinstaller
 
       - name: Test
         run: pytest
+
+      - name: Validate installer scripts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sh -n install.sh
+          pwsh -NoProfile -Command '[void][scriptblock]::Create((Get-Content install.ps1 -Raw))'
 
       - name: Exercise unified editor Skill installation
         run: |
@@ -41,6 +49,15 @@ jobs:
           grep -q "Distill mode" /tmp/editor-skills/persona-builder/SKILL.md
           grep -q "Hybrid mode" /tmp/editor-skills/persona-builder/SKILL.md
           grep -q "personadock pack" /tmp/editor-skills/persona-builder/SKILL.md
+
+      - name: Build and verify standalone executable
+        run: |
+          pyinstaller --clean --noconfirm --onefile --name personadock --collect-data persona_dock src/persona_dock/__main__.py
+          python scripts/verify_binary.py --binary dist/personadock
+          python scripts/package_binary.py \
+            --binary dist/personadock \
+            --output dist/personadock-linux-x86_64.tar.gz
+          test -s dist/personadock-linux-x86_64.tar.gz
 
       - name: Exercise local PersonaPack workflow
         run: |
