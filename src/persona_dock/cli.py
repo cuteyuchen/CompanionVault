@@ -10,8 +10,8 @@ from .distill import distill_chat
 from .installer import install_package, rollback, status, uninstall
 from .packaging import export_public, inspect_package, pack_project
 from .project import find_project, init_project, validate_project
-from .skill_install import SKILL_SELECTIONS, TARGETS as SKILL_TARGETS
-from .skill_install import install_skills
+from .skill_install import TARGETS as SKILL_TARGETS
+from .skill_install import install_skill
 
 
 def _print_status() -> int:
@@ -52,21 +52,15 @@ def build_parser() -> argparse.ArgumentParser:
     command.add_argument("--speaker", required=True)
     command.add_argument("--locale", default="zh-CN")
 
-    skill = sub.add_parser("skill", help="manage PersonaDock AI editor Skills")
+    skill = sub.add_parser("skill", help="manage the PersonaDock AI editor Skill")
     skill_sub = skill.add_subparsers(dest="skill_command", required=True)
     command = skill_sub.add_parser(
         "install",
-        help="install PersonaDock creation and distillation Skills into an AI editor",
+        help="install the unified persona-builder Skill into an AI editor",
     )
     command.add_argument("--target", required=True, choices=sorted(SKILL_TARGETS))
     command.add_argument("--scope", choices=["project", "global"], default="global")
-    command.add_argument(
-        "--skill",
-        choices=SKILL_SELECTIONS,
-        default="all",
-        help="install both Skills by default, or select one",
-    )
-    command.add_argument("--path", help="custom parent directory for installed Skills")
+    command.add_argument("--path", help="custom parent directory for the installed Skill")
 
     command = sub.add_parser("validate", help="validate a local persona project")
     command.add_argument("project", nargs="?", default=".")
@@ -119,14 +113,12 @@ def main(argv: list[str] | None = None) -> int:
         print(result)
         return 0
     if args.command == "skill" and args.skill_command == "install":
-        results = install_skills(
+        result = install_skill(
             args.target,
             args.scope,
-            args.skill,
             Path(args.path) if args.path else None,
         )
-        for result in results:
-            print(result)
+        print(result)
         return 0
     if args.command == "validate":
         errors = validate_project(Path(args.project))
