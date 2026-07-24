@@ -29,7 +29,7 @@ jobs:
             "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -f state=pending \
             -f context=personadock-bundle \
-            -f description='Building PersonaDock wheel, Skill, and PersonaPack' \
+            -f description='Building PersonaDock distributions, Skills, and PersonaPack' \
             -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
       - name: Reject legacy project remnants
@@ -88,23 +88,28 @@ jobs:
 
       - name: Install build tools
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
+          python -m pip install build
           python -m pip install -e .[dev]
 
       - name: Run tests
         run: pytest
 
-      - name: Build wheel
+      - name: Build Python distributions
         run: |
           mkdir -p dist/python
-          python -m pip wheel . --no-deps --wheel-dir dist/python
+          python -m build --outdir dist/python
 
-      - name: Verify wheel-bundled Skill
+      - name: Verify bundled Skills
         shell: bash
         run: |
           set -Eeuo pipefail
           wheel="$(find dist/python -type f -name '*.whl' -print -quit)"
+          sdist="$(find dist/python -type f -name '*.tar.gz' -print -quit)"
           test -n "$wheel"
+          test -n "$sdist"
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/SKILL.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/prompt-contract.md'
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/SKILL.md'
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/references/output-contract.md'
           python -m venv /tmp/personadock-wheel
@@ -113,6 +118,8 @@ jobs:
             --target generic \
             --scope project \
             --path /tmp/wheel-skills
+          test -f /tmp/wheel-skills/persona-builder/SKILL.md
+          test -f /tmp/wheel-skills/persona-builder/references/memory-contract.md
           test -f /tmp/wheel-skills/persona-distiller/SKILL.md
           test -f /tmp/wheel-skills/persona-distiller/references/memory-contract.md
 
@@ -125,13 +132,14 @@ jobs:
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum python/*.whl *.personapack > SHA256SUMS
+          sha256sum python/*.whl python/*.tar.gz *.personapack > SHA256SUMS
 
       - uses: actions/upload-artifact@v4
         with:
           name: persona-dock-0.1.0
           path: |
             dist/python/*.whl
+            dist/python/*.tar.gz
             dist/*.personapack
             dist/SHA256SUMS
           if-no-files-found: error
