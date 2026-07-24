@@ -80,7 +80,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: persona-dock-0.2.0
+          name: persona-dock-0.1.0
           path: |
             dist/python/*.whl
             dist/*.personapack
