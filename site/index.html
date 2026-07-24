@@ -19,14 +19,14 @@
 </head>
 <body>
   <h1>PersonaDock</h1>
-  <p class="lead">直接描述你想要的人格，或选择聊天记录进行蒸馏。PersonaDock 为 AI 编辑器提供 Builder 与 Distiller Skills，生成短 SOUL、详细 Skill、已审核 Memory 和可移植 PersonaPack。</p>
+  <p class="lead">安装一个统一的 persona-builder Skill，直接描述你想要的人格、选择聊天记录进行证据蒸馏，或将两者结合。Skill 会自动判断模式，生成短 SOUL、详细 Skill、已审核 Memory 和可移植 PersonaPack。</p>
   <pre><code>pip install persona-dock
 personadock skill install --target codex --scope global
 # 在 Codex 中描述人格或选择聊天记录
 personadock install ./my-persona.personapack --target hermes</code></pre>
   <div class="grid">
-    <div class="card"><strong>Natural language</strong><br>用“什么时候会怎么样”的自然语言直接设计人格。</div>
-    <div class="card"><strong>Evidence distillation</strong><br>从用户选择的聊天记录中提取有证据支持的行为。</div>
+    <div class="card"><strong>One Skill</strong><br>自动选择创建、蒸馏、混合或优化流程。</div>
+    <div class="card"><strong>Evidence-aware</strong><br>聊天蒸馏保留来源、置信度和审核过程。</div>
     <div class="card"><strong>Layered</strong><br>SOUL、Skill、Memory 各司其职，避免上下文膨胀。</div>
     <div class="card"><strong>Portable</strong><br>使用可校验的 .personapack 跨智能体安装。</div>
   </div>

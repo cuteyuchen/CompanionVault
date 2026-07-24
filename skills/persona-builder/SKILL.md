@@ -1,7 +1,7 @@
 ---
 name: persona-builder
-description: Build a private PersonaDock persona from natural-language requirements, optional examples, and optional selected reference material. Turn descriptions such as “when the user is tired, respond gently but do not lecture” into a compact SOUL, detailed scenario Skill, reviewed Memory, tests, and a portable PersonaPack.
-argument-hint: [persona-description] [output-project]
+description: Create, distill, refine, or hybrid-build a private PersonaDock persona from natural-language requirements, user-selected chat records, optional examples, and existing projects. Automatically choose the correct workflow and produce a compact SOUL, detailed persona Skill, reviewed Memory, tests, and a portable PersonaPack.
+argument-hint: [persona-description-or-selected-sources] [output-project]
 version: 0.1.0
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
@@ -11,43 +11,61 @@ allowed-tools: Read, Write, Edit, Bash
 
 ## Purpose
 
-Create or refine a PersonaDock-compatible local persona project from what the user describes in natural language. The user may provide:
+Create or refine a normal PersonaDock project from any combination of:
 
-- a one-sentence concept
-- identity, personality, voice, relationship, or boundary requirements
+- a short natural-language concept
+- identity, personality, voice, relationship, flaw, and boundary requirements
 - rules written as “when X happens, they do Y”
-- desired strengths, flaws, habits, emotional reactions, and examples
-- optional reference files or selected chats
-- an existing PersonaDock project that needs refinement
+- user-selected chat records or writing samples
+- an existing PersonaDock project
 
-The result must be a normal PersonaDock project and, when requested, a validated `.personapack`.
+The final result must use the standard PersonaDock project structure and, when requested, become a validated `.personapack`.
 
-## Modes
+## Automatic mode routing
 
-Choose the mode automatically from the request:
+Determine the mode from the user’s actual goal. Do not ask the user to choose a technical mode unless the goal is genuinely ambiguous.
 
-1. **Create:** build a new persona from natural-language requirements.
-2. **Refine:** edit an existing PersonaDock project without discarding reviewed content.
-3. **Hybrid:** combine desired traits with selected examples or chat records. Desired traits are design requirements; observations from records are evidence. Keep the two distinguishable when they conflict.
+1. **Create mode** — natural-language requirements are the primary source of truth.
+2. **Distill mode** — selected records are the primary source and the goal is to reconstruct observed behavior with evidence.
+3. **Hybrid mode** — explicit design requirements and selected records both matter.
+4. **Refine mode** — an existing PersonaDock project must be edited without discarding reviewed content.
 
-For evidence-first imitation of a real speaker, use `persona-distiller`. This Skill may still consume user-selected references when the goal is design rather than strict reconstruction.
+Routing rules:
+
+- “Create/design/make a persona who…” with no required source imitation -> Create.
+- “Analyze these chats and reproduce how this speaker behaves” -> Distill.
+- “Use my description as the design, but learn rhythm or examples from these chats” -> Hybrid.
+- “Change this existing persona…” -> Refine.
+- If selected records are only inspiration, do not treat their private facts or relationships as persona canon.
+
+## Precedence and conflict rules
+
+Use this precedence unless the user explicitly requests evidence-first reconstruction:
+
+1. the user’s latest direct requirement
+2. reviewed content in an existing PersonaDock project
+3. supported observations from selected sources
+4. clearly marked non-sensitive defaults
+
+In Distill mode, do not rewrite contradictory evidence into a clean fictional trait. Record uncertainty and show the conflict to the user. In Hybrid mode, keep design requirements and source observations distinguishable when they disagree.
 
 ## Core rules
 
 1. Default to a private local project. Do not require GitHub, a fork, a PR, or publication.
-2. Ask only for concrete missing information that materially changes the persona. Do not force a long questionnaire when the user has already supplied enough detail.
-3. Convert vague adjectives into observable behavior. Write rules as: trigger -> behavior -> limit.
-4. Keep SOUL concise. Put identity, stable traits, hard boundaries, Skill routing, and memory honesty in SOUL; put detailed scenes and examples in Skill references.
-5. Do not invent user history. User-authored fictional canon may be stored as persona background; real user facts and shared events require explicit confirmation before entering packaged Memory.
-6. Preserve deliberate flaws and disagreements when requested. Do not flatten every persona into a universally agreeable assistant.
-7. Resolve contradictions explicitly. Prefer the user's latest direct requirement, then document remaining uncertainty under `.private/design-notes.md`.
-8. Do not publish or upload anything unless the user explicitly asks.
+2. Read only files or directories explicitly selected by the user.
+3. Never modify source records. Put normalized records, evidence, assumptions, and unreviewed candidates under `.private/`.
+4. Convert vague adjectives into observable behavior using: trigger -> behavior -> limit.
+5. Keep SOUL concise. Put identity, stable traits, hard boundaries, Skill routing, and memory honesty in SOUL; put detailed scenes and examples in Skill references.
+6. Do not invent user history. Fictional persona canon may be stored as background, but real user facts and shared events require explicit approval before packaged Memory.
+7. Preserve deliberate flaws, independent judgment, and disagreement when requested. Do not flatten every persona into a universally agreeable assistant.
+8. Never claim an evidence-derived persona is the real person represented by source material.
+9. Do not publish or upload anything unless the user explicitly asks.
 
 ## Workflow
 
-### 1. Understand the persona
+### 1. Understand the request
 
-Extract concrete requirements into these groups:
+Extract concrete requirements into:
 
 - identity and relationship role
 - 3–7 stable core traits
@@ -57,8 +75,9 @@ Extract concrete requirements into these groups:
 - daily, playful, serious, conflict, repair, boundary, and reunion scenarios
 - relationship progression
 - memory policy and canonical background
+- selected source files, target speaker, and evidence scope when records are provided
 
-For short requests, infer reasonable non-sensitive defaults and mark them as design choices rather than user facts.
+For short design requests, infer reasonable non-sensitive defaults and label them as design choices rather than facts. Ask only for missing information that materially changes the result.
 
 ### 2. Create or locate the project
 
@@ -70,29 +89,46 @@ personadock init "<output-project>" --id "<persona-id>" --name "<display-name>"
 
 For an existing project, locate `companion.yaml` and edit in place. Never overwrite reviewed Memory or user-authored references without showing the change.
 
-### 3. Build by layer
+Follow `references/output-contract.md` for the project tree.
+
+### 3. Handle selected records in Distill or Hybrid mode
+
+When source records are present:
+
+1. Confirm the target speaker and selected files.
+2. Normalize only the required material into `.private/normalized.jsonl` when useful.
+3. Store evidence records in `.private/evidence.jsonl` using `references/evidence-contract.md`.
+4. Separate observable style and behavior from real-world facts, inferred motives, and private events.
+5. Look for repeated behavior across dates and situations instead of overfitting to one message.
+6. Preserve contradictions and low-confidence observations as review items.
+7. Put unapproved factual memories only in `.private/memory-candidates.jsonl`.
+
+Do not use MBTI, astrology, occupation, or a single event as a substitute for behavioral evidence.
+
+### 4. Build by layer
 
 - **SOUL:** stable identity, core traits, compact voice, hard boundaries, Skill triggers, and memory lookup rules.
 - **Persona Skill:** detailed behavior and routing in `skills/persona/SKILL.md`.
 - **References:** write `voice.md`, `daily-scenarios.md`, `emotional-support.md`, `conflict-repair.md`, `relationship-stages.md`, and `examples.md`.
 - **Memory:** keep real-user facts out unless explicitly confirmed. Put unconfirmed candidates in `.private/memory-candidates.jsonl`.
-- **Tests:** cover the user's important “when X, do Y” rules, memory honesty, routing, boundaries, conflict, and style consistency.
+- **Tests:** cover important “when X, do Y” rules, evidence limits, memory honesty, routing, boundaries, conflict, and style consistency.
 
-Follow `references/output-contract.md` and `references/prompt-contract.md`.
+Use `references/prompt-contract.md` for natural-language requirements, `references/evidence-contract.md` for selected records, and `references/memory-contract.md` for real facts.
 
-### 4. Show a review summary
+### 5. Show a review summary
 
 Before packaging, show:
 
-- the compact SOUL design
+- the selected mode and why it was chosen
+- the compact SOUL design or evidence-backed conclusions
 - the main scenario rules added to the persona Skill
 - intentional flaws and boundaries
-- assumptions or unresolved contradictions
-- any proposed Memory entries
+- assumptions, low-confidence evidence, or unresolved contradictions
+- proposed Memory entries with source references when applicable
 
-A user may approve the design as a whole, but each real-user Memory entry must still be explicit and reviewable.
+A user may approve the overall design, but each real-user Memory entry must remain explicit and reviewable. Unapproved memory stays private and must not be packaged.
 
-### 5. Validate and package
+### 6. Validate and package
 
 ```bash
 personadock validate "<output-project>"
@@ -101,9 +137,9 @@ personadock pack "<output-project>"
 personadock inspect "<output-project>/dist/<id>-<version>.personapack"
 ```
 
-Fix source files when validation fails. Do not bypass validation.
+Fix source files when validation fails. Never bypass validation.
 
-### 6. Optional installation
+### 7. Optional installation
 
 Only when requested:
 
@@ -112,7 +148,7 @@ personadock install "<package.personapack>" --target hermes
 personadock install "<package.personapack>" --target openclaw
 ```
 
-## Example request translation
+## Example: natural-language design
 
 User request:
 
@@ -129,12 +165,29 @@ Translate it into:
 
 Do not merely paste the paragraph into SOUL.
 
+## Example: evidence-first distillation
+
+User request:
+
+> Read the selected chat files, focus on speaker Xiaoyou, and create a private persona that reflects her repeated speaking and conflict-repair patterns.
+
+Use Distill mode:
+
+- only read the selected records
+- create source-linked evidence entries
+- distinguish repeated behavior from isolated events
+- show uncertain or conflicting observations
+- keep raw records and unapproved memory under `.private/`
+- never claim the generated persona is the real Xiaoyou
+
 ## Completion checks
 
 - `personadock validate` passes.
 - SOUL stays below `hard_limit_chars`.
 - Every important “when X” requirement appears in a Skill reference or test.
+- Evidence-derived conclusions have source references and confidence levels.
 - Detailed persona information is not overloaded into SOUL.
 - Raw references and private notes are absent from the package.
 - Every packaged real-user Memory entry has `reviewed: true`.
 - `personadock inspect` reports `integrity: ok`.
+- No PR or public upload was created without an explicit request.

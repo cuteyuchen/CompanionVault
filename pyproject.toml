@@ -53,8 +53,6 @@ persona_dock = [
   "data/*.json",
   "data/persona-builder/SKILL.md",
   "data/persona-builder/references/*.md",
-  "data/persona-distiller/SKILL.md",
-  "data/persona-distiller/references/*.md",
 ]
 
 [tool.pytest.ini_options]

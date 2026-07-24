@@ -61,16 +61,17 @@ jobs:
       - name: Check Python distributions
         run: python -m twine check dist/*.whl dist/*.tar.gz
 
-      - name: Verify wheel-bundled Skills
+      - name: Verify wheel-bundled unified Skill
         shell: bash
         run: |
           set -Eeuo pipefail
           wheel="$(find dist -type f -name '*.whl' -print -quit)"
           test -n "$wheel"
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/SKILL.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/output-contract.md'
           python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/prompt-contract.md'
-          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/SKILL.md'
-          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/references/output-contract.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/evidence-contract.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-builder/references/memory-contract.md'
 
       - name: Build example PersonaPack
         run: |
