@@ -2,21 +2,25 @@
 
 **PersonaDock 是一个本地优先的 AI 人格工具，用于创建或蒸馏人格，生成 SOUL、Skill 和 Memory，并将其打包、一键安装到不同智能体平台。**
 
-它不是一个要求用户提交人格 PR 的仓库。用户的人格、聊天记录和记忆默认只保存在本地；公开分享是明确选择后的可选步骤。
+PersonaDock 不要求用户提交人格 PR。人格、聊天记录和记忆默认只保存在本地；公开分享是用户明确选择后的可选步骤。
 
 ## 核心流程
 
 ```text
-创建或蒸馏人格
+用户选择聊天记录
+      ↓
+Codex / Claude / OpenCode 使用 persona-distiller Skill
+      ↓
+生成 PersonaDock 本地人格工程
       ↓
 生成短 SOUL + 人格 Skill + 已审核 Memory
       ↓
-构建 Hermes / OpenClaw / Generic 目标
-      ↓
 打包为 .personapack
       ↓
-一键安装、卸载或回滚
+一键安装到 Hermes / OpenClaw
 ```
+
+内置 `personadock distill` 只是轻量备用功能。复杂聊天、多文件上下文和高质量人格分析优先交给支持 Skill 的 AI 编辑器完成。
 
 ## 安装
 
@@ -32,30 +36,85 @@ cd PersonaDock
 pip install -e .[dev]
 ```
 
-主命令：
-
 ```bash
 personadock --help
 # 或
 pdock --help
 ```
 
-## 快速开始
+## 推荐方式：在 AI 编辑器中蒸馏
 
-### 1. 创建私有人格项目
+PersonaDock wheel 内置 `persona-distiller` Skill。可以一键安装到不同编辑器：
+
+### Codex
+
+全局安装：
 
 ```bash
-personadock init ./my-companion \
-  --id my-companion \
-  --name "我的伙伴"
-
-cd my-companion
+personadock skill install --target codex --scope global
 ```
 
-项目默认包含：
+当前项目安装：
+
+```bash
+personadock skill install --target codex --scope project
+```
+
+### Claude
+
+```bash
+personadock skill install --target claude --scope global
+```
+
+### OpenCode
+
+```bash
+personadock skill install --target opencode --scope global
+```
+
+### 通用 Agent Skills 目录
+
+```bash
+personadock skill install --target agents --scope global
+personadock skill install --target generic --scope project
+```
+
+也可以指定自定义父目录：
+
+```bash
+personadock skill install \
+  --target generic \
+  --path /custom/agent-skills
+```
+
+安装后的 Skill 目录包含：
 
 ```text
-my-companion/
+persona-distiller/
+├── SKILL.md
+└── references/
+    ├── output-contract.md
+    └── memory-contract.md
+```
+
+### 在编辑器中使用
+
+向编辑器明确选择聊天记录，并要求使用 `persona-distiller`：
+
+```text
+请使用 persona-distiller Skill，读取我选择的这些聊天记录：
+
+- ./chats/2026-01.txt
+- ./chats/2026-02.json
+
+目标说话人是“小柚”，人格 ID 为 xiaoyou，输出到 ./xiaoyou-persona。
+先生成待审核的人格工程，展示 SOUL、Skill 和 Memory 候选，确认后再打包。
+```
+
+Skill 会直接生成 PersonaDock 可用的标准工程，不需要先运行内置 `distill`：
+
+```text
+xiaoyou-persona/
 ├── companion.yaml
 ├── skills/
 │   └── persona/
@@ -71,13 +130,48 @@ my-companion/
 └── .gitignore
 ```
 
-`.private/` 默认被 Git 忽略，原始聊天和未审核的记忆候选不会进入人格包。
+其中：
 
-### 2. 验证并构建
+- `.private/` 保存原始资料、中间证据和未审核记忆候选。
+- `companion.yaml` 保存短 SOUL 所需的稳定核心和路由规则。
+- `skills/persona/` 保存详细场景、表达、关系行为和示例。
+- `memory/seed.jsonl` 只允许写入用户明确确认且带有 `reviewed: true` 的事实。
+
+完成审核后，编辑器运行：
 
 ```bash
-personadock validate
-personadock build
+personadock validate ./xiaoyou-persona
+personadock build ./xiaoyou-persona
+personadock pack ./xiaoyou-persona
+personadock inspect ./xiaoyou-persona/dist/xiaoyou-0.1.0.personapack
+```
+
+## 手工创建人格工程
+
+不使用聊天记录时，可以直接创建模板：
+
+```bash
+personadock init ./my-companion \
+  --id my-companion \
+  --name "我的伙伴"
+```
+
+然后编辑：
+
+```text
+my-companion/
+├── companion.yaml
+├── skills/persona/
+├── memory/
+├── tests/
+└── .private/
+```
+
+验证并构建：
+
+```bash
+personadock validate ./my-companion
+personadock build ./my-companion
 ```
 
 构建输出：
@@ -99,18 +193,31 @@ personadock build
 └── tests/
 ```
 
-SOUL 只保留稳定身份、核心人格、边界、Skill 路由和记忆真实性规则。详细场景、表达方式、关系阶段和示例放在 Skill references 中，避免 SOUL 过长。
+SOUL 只保留稳定身份、核心人格、边界、Skill 路由和记忆真实性规则。详细场景、关系阶段和示例放在 Skill references 中，避免 SOUL 过长。
 
-### 3. 打包 PersonaPack
+## 轻量备用蒸馏
+
+对于简单的“说话人：内容”文本，可以不依赖 AI 编辑器：
 
 ```bash
-personadock pack
+personadock distill ./chat.txt ./xiaoyou \
+  --id xiaoyou \
+  --name 小柚 \
+  --speaker 小柚
+```
+
+这个命令只生成待审核骨架、表达候选和记忆候选。它不负责复杂上下文推断，也不会自动把候选记忆标记为已审核。
+
+## 打包 PersonaPack
+
+```bash
+personadock pack ./my-companion
 ```
 
 输出：
 
 ```text
-dist/my-companion-0.1.0.personapack
+my-companion/dist/my-companion-0.1.0.personapack
 ```
 
 `.personapack` 是可校验的 ZIP 格式，包含：
@@ -121,26 +228,22 @@ dist/my-companion-0.1.0.personapack
 - 场景测试
 - Manifest 与每个文件的 SHA-256
 
-检查人格包：
-
 ```bash
-personadock inspect dist/my-companion-0.1.0.personapack
+personadock inspect ./my-companion/dist/my-companion-0.1.0.personapack
 ```
 
-### 4. 安装到智能体
+## 安装到智能体
 
 Hermes：
 
 ```bash
-personadock install dist/my-companion-0.1.0.personapack \
-  --target hermes
+personadock install ./persona.personapack --target hermes
 ```
 
 OpenClaw：
 
 ```bash
-personadock install dist/my-companion-0.1.0.personapack \
-  --target openclaw
+personadock install ./persona.personapack --target openclaw
 ```
 
 指定安装目录：
@@ -159,34 +262,7 @@ personadock rollback --target hermes
 personadock uninstall --target openclaw
 ```
 
-## 从聊天记录蒸馏
-
-输入文件可使用简单的说话人格式：
-
-```text
-用户：今天有点累。
-小柚：那先别逼自己解决所有事情，坐一会儿，我听着。
-```
-
-创建蒸馏项目：
-
-```bash
-personadock distill ./chat.txt ./xiaoyou \
-  --id xiaoyou \
-  --name 小柚 \
-  --speaker 小柚
-```
-
-蒸馏命令会：
-
-- 将原始聊天保存到 `.private/raw/`
-- 将人格说话示例放入 Skill reference
-- 将可能的事实生成未审核记忆候选
-- 生成明确的人工审核说明
-
-未设置 `reviewed: true` 的记忆不能构建或打包。PersonaDock 不会把未审核候选或原始聊天装进 PersonaPack。
-
-## SOUL、Skill 与 Memory 的职责
+## SOUL、Skill 与 Memory
 
 | 层 | 负责内容 | 加载方式 |
 |---|---|---|
@@ -201,24 +277,24 @@ personadock distill ./chat.txt ./xiaoyou \
 
 - 不需要 GitHub 账号
 - 不提交 Pull Request
-- 不上传人格
-- 不上传聊天记录
+- 不上传人格或聊天记录
+- 只读取用户明确选择的蒸馏资料
 - `.private/` 永不打包
-- 只有明确审核的记忆进入私有 PersonaPack
+- 未审核记忆不能进入 PersonaPack
+- 只有用户明确要求时才公开导出
 
-需要公开时，先生成不含私人记忆的导出：
+生成不含私人记忆的公共版本：
 
 ```bash
-personadock export-public
+personadock export-public ./my-companion
 ```
-
-输出目录中的 Memory seed 会被清空。用户之后可以自行选择上传 GitHub Release、私下分享或提交到其他公共目录。
 
 ## 命令
 
 ```text
 personadock init            创建本地人格工程
-personadock distill         从聊天文本创建待审核工程
+personadock skill install   安装 AI 编辑器蒸馏 Skill
+personadock distill         简单文本的轻量备用蒸馏
 personadock validate        验证 Schema、隐私和记忆审核状态
 personadock build           生成平台目标文件
 personadock pack            生成 .personapack
@@ -230,22 +306,29 @@ personadock status          查看安装状态
 personadock export-public   导出无私人记忆的公共版本
 ```
 
-## 当前目标平台
+## 当前目标
+
+人格包安装目标：
 
 - Hermes
 - OpenClaw
 - Generic system prompt
 
-平台适配器会继续独立演进，不要求人格工程改变其核心内容。
+蒸馏 Skill 安装目标：
+
+- Codex
+- Claude
+- OpenCode
+- Agent Skills 兼容目录
+- 自定义目录
 
 ## 开发验证
 
 ```bash
 pytest
 
-personadock init /tmp/persona-demo \
-  --id persona-demo \
-  --name "Persona Demo"
+personadock skill install --target generic --path /tmp/skills
+personadock init /tmp/persona-demo --id persona-demo --name "Persona Demo"
 personadock validate /tmp/persona-demo
 personadock build /tmp/persona-demo
 personadock pack /tmp/persona-demo
