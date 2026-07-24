@@ -37,6 +37,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          V1_TAG_TARGET: 6ba56875be0175367cc397a9fbcc8c86695ca51a
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -82,11 +83,17 @@ jobs:
             echo "::group::Building ${tag}"
 
             if ! git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
-              sha="$(git log --all --format='%H' -n 1 --grep="^feat: release v${version}$")"
-              if [[ -z "$sha" ]]; then
+              if [[ "$version" == "1.0.0" ]]; then
+                sha="$V1_TAG_TARGET"
+              else
+                sha="$(git log --all --format='%H' -n 1 --grep="^feat: release v${version}$")"
+              fi
+
+              if [[ -z "$sha" ]] || ! git cat-file -e "${sha}^{commit}"; then
                 echo "Unable to find milestone commit for ${tag}" >&2
                 exit 1
               fi
+
               git tag "$tag" "$sha"
               git push origin "refs/tags/${tag}"
             fi
