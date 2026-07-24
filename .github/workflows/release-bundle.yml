@@ -29,7 +29,7 @@ jobs:
             "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -f state=pending \
             -f context=personadock-bundle \
-            -f description='Building PersonaDock wheel and PersonaPack' \
+            -f description='Building PersonaDock wheel, Skill, and PersonaPack' \
             -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
       - uses: actions/setup-python@v5
@@ -49,6 +49,23 @@ jobs:
         run: |
           mkdir -p dist/python
           python -m pip wheel . --no-deps --wheel-dir dist/python
+
+      - name: Verify wheel-bundled Skill
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$(find dist/python -type f -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/SKILL.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/references/output-contract.md'
+          python -m venv /tmp/personadock-wheel
+          /tmp/personadock-wheel/bin/python -m pip install "$wheel"
+          /tmp/personadock-wheel/bin/personadock skill install \
+            --target generic \
+            --scope project \
+            --path /tmp/wheel-skills
+          test -f /tmp/wheel-skills/persona-distiller/SKILL.md
+          test -f /tmp/wheel-skills/persona-distiller/references/memory-contract.md
 
       - name: Build example PersonaPack
         run: |
