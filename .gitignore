@@ -1,9 +1,10 @@
 __pycache__/
+*.py[cod]
 .pytest_cache/
 .venv/
-dist/
 build/
+dist/
 *.egg-info/
 .private/
-.local-personas/
-candidates/*/.private/
+.personadock/
+*.personapack
