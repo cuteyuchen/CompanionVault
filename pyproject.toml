@@ -10,10 +10,29 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "cuteyuchen" }]
+keywords = ["ai", "agent", "persona", "soul", "skills", "memory", "hermes", "openclaw"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
   "PyYAML>=6.0",
   "jsonschema>=4.20",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cuteyuchen/PersonaDock"
+Repository = "https://github.com/cuteyuchen/PersonaDock"
+Issues = "https://github.com/cuteyuchen/PersonaDock/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
@@ -32,6 +51,8 @@ include = ["persona_dock*"]
 [tool.setuptools.package-data]
 persona_dock = [
   "data/*.json",
+  "data/persona-builder/SKILL.md",
+  "data/persona-builder/references/*.md",
   "data/persona-distiller/SKILL.md",
   "data/persona-distiller/references/*.md",
 ]
