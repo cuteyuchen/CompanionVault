@@ -3,6 +3,9 @@ name: Pages
 on:
   push:
     branches: [main]
+    paths:
+      - site/**
+      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
@@ -23,28 +26,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install project
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install .
-
-      - name: Build downloadable packages
-        run: companion-vault build --packages
-
-      - name: Build Pages site
-        run: companion-vault site-build
-
       - uses: actions/configure-pages@v5
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
-
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4
