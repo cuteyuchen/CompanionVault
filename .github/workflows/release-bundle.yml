@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          : > .legacy-audit.txt
+          : > legacy-audit.txt
 
           path_matches="$(find . -path './.git' -prune -o \
             \( -iname '*companion_vault*' -o -iname '*companion-vault*' -o -iname '*companionvault*' -o -iname '*cvault*' \) \
@@ -45,21 +45,21 @@ jobs:
           text_matches="$(grep -RIlE \
             'CompanionVault|companion[_-]vault|companionvault|cvault' \
             --exclude=release-bundle.yml \
-            --exclude=.legacy-audit.txt \
+            --exclude=legacy-audit.txt \
             --exclude-dir=.git \
             . || true)"
 
           if [[ -n "$path_matches" ]]; then
-            echo '[legacy paths]' >> .legacy-audit.txt
-            printf '%s\n' "$path_matches" >> .legacy-audit.txt
+            echo '[legacy paths]' >> legacy-audit.txt
+            printf '%s\n' "$path_matches" >> legacy-audit.txt
           fi
           if [[ -n "$text_matches" ]]; then
-            echo '[legacy text references]' >> .legacy-audit.txt
-            printf '%s\n' "$text_matches" >> .legacy-audit.txt
+            echo '[legacy text references]' >> legacy-audit.txt
+            printf '%s\n' "$text_matches" >> legacy-audit.txt
           fi
 
-          if [[ -s .legacy-audit.txt ]]; then
-            cat .legacy-audit.txt
+          if [[ -s legacy-audit.txt ]]; then
+            cat legacy-audit.txt
             exit 1
           fi
 
@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: legacy-audit-${{ github.sha }}
-          path: .legacy-audit.txt
+          path: legacy-audit.txt
           if-no-files-found: ignore
           retention-days: 7
 
