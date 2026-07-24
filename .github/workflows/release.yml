@@ -1,19 +1,95 @@
 name: Release assets
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to package and publish
+        required: true
+        type: string
+
 permissions:
   contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - run: pip install -e .
-      - run: companion-vault build --packages
-      - uses: softprops/action-gh-release@v2
+      - name: Checkout release tag
+        uses: actions/checkout@v4
         with:
-          generate_release_notes: true
-          files: dist/packages/*.zip
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Verify tag
+        run: git rev-parse --verify "refs/tags/${RELEASE_TAG}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .
+
+      - name: Build persona outputs
+        run: companion-vault build
+
+      - name: Package persona assets
+        run: |
+          python - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          root = Path.cwd()
+          registry_path = root / "dist" / "registry.json"
+          if not registry_path.is_file():
+              raise SystemExit("dist/registry.json was not generated")
+
+          registry = json.loads(registry_path.read_text(encoding="utf-8"))
+          output = root / "dist" / "packages"
+          output.mkdir(parents=True, exist_ok=True)
+          fixed_date = (2020, 1, 1, 0, 0, 0)
+
+          for persona in registry.get("personas", []):
+              source = root / "dist" / persona["id"]
+              if not source.is_dir():
+                  raise SystemExit(f"missing compiled persona directory: {source}")
+              destination = output / f"{persona['id']}-{persona['version']}.zip"
+              with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                  for path in sorted(p for p in source.rglob("*") if p.is_file()):
+                      info = zipfile.ZipInfo(path.relative_to(source).as_posix(), fixed_date)
+                      info.compress_type = zipfile.ZIP_DEFLATED
+                      info.external_attr = 0o644 << 16
+                      archive.writestr(info, path.read_bytes())
+              print(destination)
+          PY
+
+      - name: Build CLI wheel
+        run: |
+          mkdir -p dist/python
+          python -m pip wheel . --no-deps --wheel-dir dist/python
+
+      - name: Verify release assets
+        run: |
+          find dist/packages -type f -name '*.zip' -print -quit | grep -q .
+          find dist/python -type f -name '*.whl' -print -quit | grep -q .
+          python -m zipfile -l "$(find dist/packages -type f -name '*.zip' | head -n 1)"
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
+          fi
+          gh release upload "$RELEASE_TAG" dist/packages/*.zip dist/python/*.whl --clobber
