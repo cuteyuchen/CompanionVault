@@ -28,25 +28,19 @@ jobs:
       - name: Test
         run: pytest
 
-      - name: Exercise editor Skill installation
+      - name: Exercise unified editor Skill installation
         run: |
           personadock skill install --target generic --scope project --path /tmp/editor-skills
           test -f /tmp/editor-skills/persona-builder/SKILL.md
+          test -f /tmp/editor-skills/persona-builder/references/output-contract.md
           test -f /tmp/editor-skills/persona-builder/references/prompt-contract.md
-          test -f /tmp/editor-skills/persona-distiller/SKILL.md
-          test -f /tmp/editor-skills/persona-distiller/references/output-contract.md
+          test -f /tmp/editor-skills/persona-builder/references/evidence-contract.md
+          test -f /tmp/editor-skills/persona-builder/references/memory-contract.md
+          test ! -e /tmp/editor-skills/persona-distiller
+          grep -q "Create mode" /tmp/editor-skills/persona-builder/SKILL.md
+          grep -q "Distill mode" /tmp/editor-skills/persona-builder/SKILL.md
+          grep -q "Hybrid mode" /tmp/editor-skills/persona-builder/SKILL.md
           grep -q "personadock pack" /tmp/editor-skills/persona-builder/SKILL.md
-          grep -q "personadock pack" /tmp/editor-skills/persona-distiller/SKILL.md
-
-      - name: Exercise single Skill selection
-        run: |
-          personadock skill install \
-            --target generic \
-            --scope project \
-            --skill persona-builder \
-            --path /tmp/builder-only
-          test -f /tmp/builder-only/persona-builder/SKILL.md
-          test ! -e /tmp/builder-only/persona-distiller
 
       - name: Exercise local PersonaPack workflow
         run: |
