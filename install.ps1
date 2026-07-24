@@ -45,7 +45,8 @@ try {
     Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/SHA256SUMS" -OutFile $checksumsPath
 
     $checksumLine = Get-Content $checksumsPath | Where-Object {
-        $_ -match "^[0-9a-fA-F]{64}\s+\*?$([Regex]::Escape($asset))$"
+        $parts = @($_ -split "\s+" | Where-Object { $_ })
+        $parts.Count -ge 2 -and $parts[-1].TrimStart("*") -eq $asset
     } | Select-Object -First 1
 
     if (-not $checksumLine) {
