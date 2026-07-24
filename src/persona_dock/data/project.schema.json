@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PersonaDock Project",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "name",
+    "locale",
+    "summary",
+    "soul",
+    "skill",
+    "memory",
+    "targets"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "name": {"type": "string", "minLength": 1},
+    "locale": {"type": "string", "minLength": 2},
+    "summary": {"type": "string", "minLength": 10},
+    "soul": {
+      "type": "object",
+      "required": ["identity", "core_traits", "voice", "boundaries", "skill_triggers", "target_chars", "hard_limit_chars"],
+      "properties": {
+        "identity": {"type": "string", "minLength": 10},
+        "core_traits": {"type": "array", "minItems": 3, "items": {"type": "string"}},
+        "voice": {"type": "string", "minLength": 5},
+        "boundaries": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "skill_triggers": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "target_chars": {"type": "integer", "minimum": 100},
+        "hard_limit_chars": {"type": "integer", "minimum": 200}
+      }
+    },
+    "skill": {
+      "type": "object",
+      "required": ["id", "description"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "description": {"type": "string", "minLength": 5}
+      }
+    },
+    "memory": {
+      "type": "object",
+      "required": ["enabled", "private_by_default", "bundle_policy", "never_invent"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "private_by_default": {"const": true},
+        "bundle_policy": {"enum": ["reviewed", "none"]},
+        "never_invent": {"const": true}
+      }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["hermes", "openclaw", "generic"]}
+    }
+  },
+  "additionalProperties": true
+}
