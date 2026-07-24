@@ -15,10 +15,11 @@ def main() -> int:
     if not binary.is_file():
         raise FileNotFoundError(binary)
 
-    subprocess.run([str(binary), "--help"], check=True)
+    with tempfile.TemporaryDirectory(prefix="personadock-runtime-") as runtime_dir:
+        runtime_root = Path(runtime_dir)
+        skill_root = runtime_root / "installed-skills"
 
-    with tempfile.TemporaryDirectory(prefix="personadock-skill-") as temp_dir:
-        skill_root = Path(temp_dir)
+        subprocess.run([str(binary), "--help"], check=True, cwd=runtime_root)
         subprocess.run(
             [
                 str(binary),
@@ -32,6 +33,7 @@ def main() -> int:
                 str(skill_root),
             ],
             check=True,
+            cwd=runtime_root,
         )
 
         required = [
