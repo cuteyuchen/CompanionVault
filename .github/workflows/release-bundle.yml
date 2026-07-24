@@ -32,6 +32,29 @@ jobs:
             -f description='Building PersonaDock wheel, Skill, and PersonaPack' \
             -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
+      - name: Reject legacy project remnants
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          path_matches="$(find . -path './.git' -prune -o \
+            \( -iname '*companion_vault*' -o -iname '*companion-vault*' -o -iname '*companionvault*' -o -iname '*cvault*' \) \
+            -print)"
+
+          text_matches="$(grep -RIlE \
+            'CompanionVault|companion[_-]vault|companionvault|cvault' \
+            --exclude=release-bundle.yml \
+            --exclude-dir=.git \
+            . || true)"
+
+          if [[ -n "$path_matches" || -n "$text_matches" ]]; then
+            echo 'Legacy paths:'
+            printf '%s\n' "$path_matches"
+            echo 'Legacy text references:'
+            printf '%s\n' "$text_matches"
+            exit 1
+          fi
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
