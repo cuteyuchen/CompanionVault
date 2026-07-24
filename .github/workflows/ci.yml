@@ -1,17 +1,37 @@
 name: CI
+
 on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e . pytest
-      - run: companion-vault validate
-      - run: companion-vault build
-      - run: pytest
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .[dev]
+
+      - name: Test
+        run: pytest
+
+      - name: Exercise local workflow
+        run: |
+          personadock init /tmp/persona-demo --id persona-demo --name "Persona Demo"
+          personadock validate /tmp/persona-demo
+          personadock build /tmp/persona-demo
+          personadock pack /tmp/persona-demo
+          personadock inspect /tmp/persona-demo/dist/persona-demo-0.1.0.personapack
