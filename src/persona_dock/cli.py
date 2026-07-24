@@ -10,8 +10,8 @@ from .distill import distill_chat
 from .installer import install_package, rollback, status, uninstall
 from .packaging import export_public, inspect_package, pack_project
 from .project import find_project, init_project, validate_project
-from .skill_install import TARGETS as SKILL_TARGETS
-from .skill_install import install_distiller_skill
+from .skill_install import SKILL_SELECTIONS, TARGETS as SKILL_TARGETS
+from .skill_install import install_skills
 
 
 def _print_status() -> int:
@@ -56,11 +56,17 @@ def build_parser() -> argparse.ArgumentParser:
     skill_sub = skill.add_subparsers(dest="skill_command", required=True)
     command = skill_sub.add_parser(
         "install",
-        help="install the persona-distiller Skill into Codex or another AI editor",
+        help="install PersonaDock creation and distillation Skills into an AI editor",
     )
     command.add_argument("--target", required=True, choices=sorted(SKILL_TARGETS))
     command.add_argument("--scope", choices=["project", "global"], default="global")
-    command.add_argument("--path", help="custom parent directory for the installed Skill")
+    command.add_argument(
+        "--skill",
+        choices=SKILL_SELECTIONS,
+        default="all",
+        help="install both Skills by default, or select one",
+    )
+    command.add_argument("--path", help="custom parent directory for installed Skills")
 
     command = sub.add_parser("validate", help="validate a local persona project")
     command.add_argument("project", nargs="?", default=".")
@@ -113,12 +119,14 @@ def main(argv: list[str] | None = None) -> int:
         print(result)
         return 0
     if args.command == "skill" and args.skill_command == "install":
-        result = install_distiller_skill(
+        results = install_skills(
             args.target,
             args.scope,
+            args.skill,
             Path(args.path) if args.path else None,
         )
-        print(result)
+        for result in results:
+            print(result)
         return 0
     if args.command == "validate":
         errors = validate_project(Path(args.project))

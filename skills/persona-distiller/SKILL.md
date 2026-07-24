@@ -1,6 +1,6 @@
 ---
 name: persona-distiller
-description: Create a private PersonaDock project from user-selected chat records. Generate a compact SOUL, detailed persona Skill, reviewed Memory, tests, and a portable PersonaPack. Works inside Codex and other AI editors; PersonaDock's built-in distill command is optional.
+description: Distill user-selected chat records into an evidence-backed private PersonaDock project. Generate a compact SOUL, detailed persona Skill, reviewed Memory candidates, tests, and a portable PersonaPack. Use persona-builder instead when natural-language design requirements are primary.
 argument-hint: [selected-chat-files] [output-project]
 version: 0.1.0
 user-invocable: true
@@ -24,7 +24,7 @@ tests/scenarios.yaml
 .private/
 ```
 
-This Skill is the preferred intelligent distillation workflow. `personadock distill` is only a lightweight fallback.
+This Skill is the preferred evidence-first distillation workflow. `personadock distill` is only a lightweight fallback. When the user primarily describes the personality they want rather than reconstructing observed behavior, use `persona-builder`; when both are present, use its hybrid mode and keep design requirements distinct from evidence.
 
 ## Rules
 

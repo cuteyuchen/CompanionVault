@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PersonaDock</title>
-  <meta name="description" content="本地优先的 AI 人格创建、打包与安装工具">
+  <meta name="description" content="从自然语言或聊天记录创建、打包并安装可移植 AI 人格">
   <style>
     :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
     body { max-width: 880px; margin: 0 auto; padding: 64px 24px; line-height: 1.7; }
@@ -19,18 +19,19 @@
 </head>
 <body>
   <h1>PersonaDock</h1>
-  <p class="lead">创建或蒸馏自己的 AI 人格，生成短 SOUL、按需加载的 Skill 和真实 Memory，打包后安装到 Hermes、OpenClaw 等智能体。</p>
+  <p class="lead">直接描述你想要的人格，或选择聊天记录进行蒸馏。PersonaDock 为 AI 编辑器提供 Builder 与 Distiller Skills，生成短 SOUL、详细 Skill、已审核 Memory 和可移植 PersonaPack。</p>
   <pre><code>pip install persona-dock
-personadock init ./my-persona --id my-persona --name "我的人格"
-personadock pack ./my-persona
-personadock install ./my-persona/dist/my-persona-0.1.0.personapack --target hermes</code></pre>
+personadock skill install --target codex --scope global
+# 在 Codex 中描述人格或选择聊天记录
+personadock install ./my-persona.personapack --target hermes</code></pre>
   <div class="grid">
-    <div class="card"><strong>Local-first</strong><br>人格、聊天和记忆默认留在本地。</div>
-    <div class="card"><strong>Layered</strong><br>SOUL、Skill、Memory 各司其职。</div>
+    <div class="card"><strong>Natural language</strong><br>用“什么时候会怎么样”的自然语言直接设计人格。</div>
+    <div class="card"><strong>Evidence distillation</strong><br>从用户选择的聊天记录中提取有证据支持的行为。</div>
+    <div class="card"><strong>Layered</strong><br>SOUL、Skill、Memory 各司其职，避免上下文膨胀。</div>
     <div class="card"><strong>Portable</strong><br>使用可校验的 .personapack 跨智能体安装。</div>
   </div>
-  <h2>不是人格投稿仓库</h2>
-  <p>PersonaDock 不要求 Fork、PR 或公开人格。公共导出只是用户主动选择的可选能力。</p>
+  <h2>私有、本地、可选择公开</h2>
+  <p>PersonaDock 不要求 Fork、PR 或上传人格。原始聊天、设计笔记和未审核记忆默认留在本地；公共导出只是用户主动选择的可选能力。</p>
   <p><a href="https://github.com/cuteyuchen/PersonaDock">GitHub</a></p>
 </body>
 </html>
