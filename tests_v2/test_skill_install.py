@@ -13,12 +13,12 @@ def test_install_unified_skill_to_custom_directory(tmp_path: Path) -> None:
     assert (output / "references/prompt-contract.md").is_file()
     assert (output / "references/evidence-contract.md").is_file()
     assert (output / "references/memory-contract.md").is_file()
-    assert not (tmp_path / "persona-distiller").exists()
 
     content = (output / "SKILL.md").read_text(encoding="utf-8")
     assert "Create mode" in content
     assert "Distill mode" in content
     assert "Hybrid mode" in content
+    assert "Refine mode" in content
     assert "personadock pack" in content
 
 
@@ -38,4 +38,3 @@ def test_cli_skill_install(tmp_path: Path) -> None:
 
     assert (tmp_path / "persona-builder/SKILL.md").is_file()
     assert (tmp_path / "persona-builder/references/evidence-contract.md").is_file()
-    assert not (tmp_path / "persona-distiller").exists()
