@@ -1,0 +1,92 @@
+name: Publish PersonaDock release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify tag and package version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}"
+          package_version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+          test "${RELEASE_TAG}" = "v${package_version}"
+          echo "PACKAGE_VERSION=${package_version}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install and test
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .[dev]
+          pytest
+
+      - name: Build wheel
+        run: |
+          mkdir -p dist/python
+          python -m pip wheel . --no-deps --wheel-dir dist/python
+
+      - name: Verify wheel-bundled Skill
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$(find dist/python -type f -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/SKILL.md'
+          python -m zipfile -l "$wheel" | grep -q 'persona_dock/data/persona-distiller/references/output-contract.md'
+
+      - name: Build example PersonaPack
+        run: |
+          personadock init /tmp/persona-demo --id persona-demo --name "Persona Demo"
+          personadock pack /tmp/persona-demo --output "$GITHUB_WORKSPACE/dist/persona-demo-${PACKAGE_VERSION}.personapack"
+          personadock inspect "$GITHUB_WORKSPACE/dist/persona-demo-${PACKAGE_VERSION}.personapack"
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum python/*.whl *.personapack > SHA256SUMS
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --verify-tag \
+              --generate-notes \
+              --title "PersonaDock ${RELEASE_TAG}"
+          fi
+          gh release upload "$RELEASE_TAG" \
+            dist/python/*.whl \
+            dist/*.personapack \
+            dist/SHA256SUMS \
+            --clobber
