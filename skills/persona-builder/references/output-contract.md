@@ -1,6 +1,6 @@
 # PersonaDock Project Output Contract
 
-The builder must create a normal PersonaDock project. It must not invent a separate intermediate format.
+The unified builder must create a normal PersonaDock project. It must not invent a separate final format for creation, distillation, hybrid generation, or refinement.
 
 ## Required tree
 
@@ -26,9 +26,14 @@ The builder must create a normal PersonaDock project. It must not invent a separ
 ├── .private/
 │   ├── design-notes.md
 │   ├── source-notes.md
-│   └── memory-candidates.jsonl
+│   ├── normalized.jsonl
+│   ├── evidence.jsonl
+│   ├── memory-candidates.jsonl
+│   └── REVIEW.md
 └── .gitignore
 ```
+
+Only the private files needed for the selected mode must be created. `.private/` is never packaged.
 
 ## companion.yaml
 
@@ -40,7 +45,7 @@ id: example-persona
 version: 0.1.0
 name: Example Persona
 locale: zh-CN
-summary: A private PersonaDock persona generated from reviewed requirements.
+summary: A private PersonaDock persona generated from reviewed requirements or evidence.
 
 soul:
   identity: A concise, stable identity statement.
@@ -80,7 +85,8 @@ targets:
 - SOUL is always-loaded routing and identity data, not a complete persona encyclopedia.
 - Skill references hold detailed behavior, scenes, examples, flaws, and relationship progression.
 - Memory holds only real, reviewable facts or explicitly approved canonical facts.
-- `.private/` holds assumptions, source notes, and uncertain material and is never packaged.
+- `.private/` holds assumptions, source notes, normalized records, evidence, and uncertain material.
+- Design requirements and evidence observations must remain distinguishable in Hybrid mode.
 
 ## Validation
 
